@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: osteovision-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 7860
+      - key: USE_CUDA
+        value: 0
+      - key: CORS_ORIGINS
+        value: "*"
