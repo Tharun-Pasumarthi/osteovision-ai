@@ -32,3 +32,4 @@ data/balanced_cohort_2400/
 .env.local
 *.log
 .vercel
+
