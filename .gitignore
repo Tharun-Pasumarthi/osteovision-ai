@@ -20,10 +20,10 @@ frontend/dist-ssr/
 frontend/.vercel/
 
 # Large Model Checkpoints
-*.pt
 *.pth
 *.bin
-outputs/checkpoints/*.pt
+# Un-ignore production checkpoints under 100MB
+!outputs/checkpoints/*.pt
 
 # Large Datasets & Archives
 *.zip
