@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  osteoporosis-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: osteoporosis-screening-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - USE_CUDA=0
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:8000,http://127.0.0.1:8000
+    volumes:
+      - ./outputs:/app/outputs:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+

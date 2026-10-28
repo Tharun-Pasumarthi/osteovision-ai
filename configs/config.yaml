@@ -1,0 +1,110 @@
+# Configuration for Multimodal Knee X-ray Osteoporosis Classification Pipeline
+
+project:
+  name: "Multimodal_Knee_Osteoporosis_Classification"
+  version: "1.0.0"
+  random_seed: 42
+
+paths:
+  data_dir: "data"
+  mendeley_dir: "data/raw/mendeley/Osteoporosis Knee X-ray"
+  zenodo_dir: "data/raw/zenodo/Knee_Osteoporosis_Dataset/Knee Osteoporosis Classification"
+  kaggle_dir: "data/raw/kaggle/OS Collected Data"
+  metadata_excel: "data/raw/mendeley/Osteoporosis Knee X-ray/patient details.xlsx"
+  outputs_dir: "outputs"
+  reports_dir: "outputs/reports"
+  figures_dir: "outputs/figures"
+  checkpoints_dir: "outputs/checkpoints"
+  predictions_dir: "outputs/predictions"
+  gradcam_dir: "outputs/gradcam_examples"
+
+dataset:
+  classes:
+    - "Normal"
+    - "Osteopenia"
+    - "Osteoporosis"
+  label_mapping:
+    "normal": "Normal"
+    "Normal": "Normal"
+    "osteopenia": "Osteopenia"
+    "Osteopenia": "Osteopenia"
+    "osteoporosis": "Osteoporosis"
+    "Osteoporosis": "Osteoporosis"
+  target_column: "class_label"
+  patient_id_column: "patient_id"
+
+splitting:
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  stratify_by_class: true
+  group_by_patient: true
+
+image:
+  input_size: 224
+  channels: 3
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+  conservative_augmentation:
+    rotation_degrees: 10
+    translate_ratio: 0.05
+    scale_range: [0.95, 1.05]
+    brightness_factor: 0.10
+    contrast_factor: 0.10
+    allow_horizontal_flip: false
+    allow_vertical_flip: false
+
+clinical:
+  selected_numerical_features:
+    - "Age"
+    - "height  (meter)"
+    - "Weight (KG) "
+    - "BMI: "
+    - "Menopause Age"
+    - "Maximum Walking distance (km)"
+  selected_categorical_features:
+    - "Gender"
+    - "Joint Pain:"
+    - "Smoker"
+    - "Alcoholic"
+    - "Diabetic"
+    - "Hypothyroidism"
+    - "History of Fracture"
+    - "Family History of Osteoporosis"
+    - "Obesity"
+  excluded_leakage_features:
+    - "T-score Value"
+    - "Z-Score Value"
+    - "Diagnosis"
+    - "S.No"
+    - "Patient Id"
+    - "Site"
+
+training:
+  batch_size: 16
+  num_workers: 0 # Windows safe
+  learning_rate: 0.0003
+  weight_decay: 0.01
+  epochs: 15
+  early_stopping_patience: 5
+  use_class_weights: true
+  label_smoothing: 0.0
+  grad_clip: 1.0
+
+models:
+  primary_baseline: "densenet121"
+  comparison_dl_models:
+    - "densenet121"
+    - "efficientnet_b0"
+    - "resnet50"
+    - "mobilenet_v3_large"
+  traditional_ml_models:
+    - "logistic_regression"
+    - "random_forest"
+    - "svm"
+    - "xgboost"
+  multimodal:
+    image_encoder: "densenet121"
+    clinical_hidden_dim: 64
+    fusion_dim: 128
+    dropout: 0.3

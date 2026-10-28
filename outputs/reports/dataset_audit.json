@@ -1,0 +1,90 @@
+{
+  "total_images_discovered": 7586,
+  "readable_images": 7586,
+  "corrupted_images": 0,
+  "unique_exact_sha256_hashes": 5102,
+  "unique_pixel_hashes": 5102,
+  "dimension_summary": {
+    "min_width": 128,
+    "max_width": 5320,
+    "mean_width": 556.7548114948589,
+    "min_height": 224,
+    "max_height": 5320,
+    "mean_height": 621.5747429475349
+  },
+  "class_distribution": {
+    "Osteoporosis": 2642,
+    "Normal": 2616,
+    "Osteopenia": 2328
+  },
+  "sources": {
+    "kaggle_gobara": {
+      "total_images": 1947,
+      "unique_patients": 1947,
+      "classes": {
+        "Osteoporosis": 793,
+        "Normal": 780,
+        "Osteopenia": 374
+      },
+      "augmented_count": 0,
+      "original_count": 1947
+    },
+    "mendeley": {
+      "total_images": 239,
+      "unique_patients": 239,
+      "classes": {
+        "Osteopenia": 154,
+        "Osteoporosis": 49,
+        "Normal": 36
+      },
+      "augmented_count": 0,
+      "original_count": 239
+    },
+    "zenodo": {
+      "total_images": 5400,
+      "unique_patients": 4739,
+      "classes": {
+        "Normal": 1800,
+        "Osteopenia": 1800,
+        "Osteoporosis": 1800
+      },
+      "augmented_count": 661,
+      "original_count": 4739
+    }
+  },
+  "metadata_summary": {
+    "total_rows": 240,
+    "unique_patients": 240,
+    "missing_field_counts": {
+      "S.No": 0,
+      "Patient Id": 0,
+      "Joint Pain:": 0,
+      "Gender": 0,
+      "Age": 0,
+      "Menopause Age": 157,
+      "height  (meter)": 0,
+      "Weight (KG) ": 0,
+      "Smoker": 0,
+      "Alcoholic": 0,
+      "Diabetic": 0,
+      "Hypothyroidism": 0,
+      "Number of Pregnancies": 116,
+      "Seizer Disorder": 0,
+      "Estrogen Use": 0,
+      "Occupation ": 4,
+      "History of Fracture": 0,
+      "Dialysis:": 0,
+      "Family History of Osteoporosis": 0,
+      "Maximum Walking distance (km)": 1,
+      "Daily Eating habits": 2,
+      "Medical History": 0,
+      "T-score Value": 0,
+      "Z-Score Value": 0,
+      "BMI: ": 0,
+      "Site": 0,
+      "Obesity": 0,
+      "Diagnosis": 0,
+      "patient_id": 0
+    }
+  }
+}

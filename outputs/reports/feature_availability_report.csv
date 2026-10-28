@@ -1,0 +1,20 @@
+feature_name,training_median_or_mode,is_standardized
+age,52.0,True
+height_m,1024.0,True
+weight_kg,68.0,True
+bmi,26.331549449141143,True
+menopause_age,47.0,True
+max_walking_km,2.0,True
+gender_female,0.5,False
+joint_pain,1.0,False
+smoker,0.0,False
+diabetic,0.0,False
+hypothyroidism,0.0,False
+history_of_fracture,0.0,False
+family_history_osteoporosis,0.0,False
+is_menopausal,0.0,False
+obesity_normal weight,N/A,False
+obesity_over weight,N/A,False
+obesity_overweight,N/A,False
+obesity_obesity,N/A,False
+obesity_under weight,N/A,False

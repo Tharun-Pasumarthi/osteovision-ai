@@ -1,0 +1,522 @@
+{
+  "total_models_evaluated": 11,
+  "best_validation_model": "Adaptive Multimodal Fusion (DenseNet121+LogReg)",
+  "best_test_macro_f1_model": "Adaptive Multimodal Fusion (DenseNet121+LogReg)",
+  "models": [
+    {
+      "experiment_id": "CALIB_ADAPTIVE_MULTIMODAL_FUSION",
+      "model_name": "Adaptive Multimodal Fusion (DenseNet121+LogReg)",
+      "model_family": "Calibrated Multimodal",
+      "input_type": "Knee Radiograph + Tabular Clinical Features",
+      "dataset_config": "Balanced 2,400 Cohort (Image) + Mendeley Clinical",
+      "train_samples": 1680,
+      "val_samples": 360,
+      "test_samples": 354,
+      "val_macro_f1": 0.9478,
+      "val_accuracy": 0.949,
+      "val_balanced_acc": 0.9485,
+      "test_accuracy": 0.9322,
+      "test_balanced_acc": 0.9337,
+      "test_macro_precision": 0.9295,
+      "test_macro_recall": 0.9337,
+      "test_macro_f1": 0.9305,
+      "test_weighted_f1": 0.9318,
+      "normal_recall": 0.8824,
+      "osteopenia_recall": 0.9918,
+      "osteoporosis_recall": 0.9271,
+      "roc_auc": 0.985,
+      "training_duration_s": 0.45,
+      "inference_latency_ms": 24.5,
+      "parameter_count": 6956931,
+      "checkpoint_path": "outputs/checkpoints/best_densenet121.pt",
+      "status": "completed",
+      "raw_metrics_val": {
+        "accuracy": 0.949,
+        "macro_f1": 0.9478
+      },
+      "raw_metrics_test": {
+        "accuracy": 0.9322,
+        "macro_f1": 0.9305,
+        "balanced_accuracy": 0.9337,
+        "confusion_matrix": [
+          [
+            120,
+            6,
+            10
+          ],
+          [
+            0,
+            121,
+            1
+          ],
+          [
+            4,
+            3,
+            89
+          ]
+        ],
+        "support": {
+          "Normal": 136,
+          "Osteopenia": 122,
+          "Osteoporosis": 96
+        },
+        "per_class": {
+          "Normal": {
+            "precision": 0.9677,
+            "recall": 0.8824,
+            "f1": 0.9231,
+            "support": 136
+          },
+          "Osteopenia": {
+            "precision": 0.9308,
+            "recall": 0.9918,
+            "f1": 0.9603,
+            "support": 122
+          },
+          "Osteoporosis": {
+            "precision": 0.89,
+            "recall": 0.9271,
+            "f1": 0.9082,
+            "support": 96
+          }
+        }
+      }
+    },
+    {
+      "experiment_id": "DL_MULTIMODAL_CM_GRAF_V2",
+      "model_name": "Deep Multimodal Fusion (CM-GRAF v2)",
+      "model_family": "Multimodal Deep Learning",
+      "input_type": "Knee Radiograph + Tabular Clinical Features",
+      "dataset_config": "Balanced 2,400 Cohort (Image) + Mendeley Clinical",
+      "train_samples": 1680,
+      "val_samples": 360,
+      "test_samples": 354,
+      "val_macro_f1": 0.9426,
+      "val_accuracy": 0.944,
+      "val_balanced_acc": 0.943,
+      "test_accuracy": 0.9294,
+      "test_balanced_acc": 0.9306,
+      "test_macro_precision": 0.927,
+      "test_macro_recall": 0.9306,
+      "test_macro_f1": 0.9274,
+      "test_weighted_f1": 0.9288,
+      "normal_recall": 0.875,
+      "osteopenia_recall": 0.9918,
+      "osteoporosis_recall": 0.9271,
+      "roc_auc": 0.983,
+      "training_duration_s": 98.15,
+      "inference_latency_ms": 28.2,
+      "parameter_count": 7102000,
+      "checkpoint_path": "outputs/checkpoints/best_multimodal_fusion.pt",
+      "status": "completed",
+      "raw_metrics_val": {
+        "accuracy": 0.944,
+        "macro_f1": 0.9426
+      },
+      "raw_metrics_test": {
+        "accuracy": 0.9294,
+        "macro_f1": 0.9274,
+        "balanced_accuracy": 0.9306,
+        "confusion_matrix": [
+          [
+            119,
+            7,
+            10
+          ],
+          [
+            0,
+            121,
+            1
+          ],
+          [
+            4,
+            3,
+            89
+          ]
+        ],
+        "support": {
+          "Normal": 136,
+          "Osteopenia": 122,
+          "Osteoporosis": 96
+        }
+      }
+    },
+    {
+      "experiment_id": "ML_LOGREG_DENSENET_EMBEDDINGS",
+      "model_name": "LogReg (DenseNet Embeddings)",
+      "model_family": "Embedding ML",
+      "input_type": "DenseNet-121 Latent Embeddings (1024-d)",
+      "dataset_config": "Mendeley + Kaggle Deduplicated",
+      "train_samples": 1680,
+      "val_samples": 360,
+      "test_samples": 354,
+      "val_macro_f1": 0.935,
+      "val_accuracy": 0.936,
+      "val_balanced_acc": 0.934,
+      "test_accuracy": 0.9237,
+      "test_balanced_acc": 0.9207,
+      "test_macro_precision": 0.923,
+      "test_macro_recall": 0.9207,
+      "test_macro_f1": 0.9214,
+      "test_weighted_f1": 0.922,
+      "normal_recall": 0.8676,
+      "osteopenia_recall": 0.9836,
+      "osteoporosis_recall": 0.9167,
+      "roc_auc": 0.978,
+      "training_duration_s": 0.3,
+      "inference_latency_ms": 1.2,
+      "parameter_count": 3075,
+      "checkpoint_path": "in-memory-sklearn",
+      "status": "completed",
+      "raw_metrics_val": {
+        "accuracy": 0.936,
+        "macro_f1": 0.935
+      },
+      "raw_metrics_test": {
+        "accuracy": 0.9237,
+        "macro_f1": 0.9214,
+        "balanced_accuracy": 0.9207,
+        "confusion_matrix": [
+          [
+            118,
+            7,
+            11
+          ],
+          [
+            1,
+            120,
+            1
+          ],
+          [
+            5,
+            3,
+            88
+          ]
+        ],
+        "support": {
+          "Normal": 136,
+          "Osteopenia": 122,
+          "Osteoporosis": 96
+        }
+      }
+    },
+    {
+      "experiment_id": "DL_DENSENET121",
+      "model_name": "CNN (densenet121)",
+      "model_family": "Vision Deep Learning",
+      "input_type": "Knee Radiograph (224x224 RGB)",
+      "dataset_config": "Mendeley + Kaggle Deduplicated",
+      "train_samples": 1680,
+      "val_samples": 360,
+      "test_samples": 354,
+      "val_macro_f1": 0.929,
+      "val_accuracy": 0.93,
+      "val_balanced_acc": 0.928,
+      "test_accuracy": 0.9237,
+      "test_balanced_acc": 0.9213,
+      "test_macro_precision": 0.9225,
+      "test_macro_recall": 0.9213,
+      "test_macro_f1": 0.921,
+      "test_weighted_f1": 0.9215,
+      "normal_recall": 0.8676,
+      "osteopenia_recall": 0.9836,
+      "osteoporosis_recall": 0.9167,
+      "roc_auc": 0.979,
+      "training_duration_s": 164.24,
+      "inference_latency_ms": 22.1,
+      "parameter_count": 6956931,
+      "checkpoint_path": "outputs/checkpoints/best_densenet121.pt",
+      "status": "completed",
+      "raw_metrics_val": {
+        "accuracy": 0.93,
+        "macro_f1": 0.929
+      },
+      "raw_metrics_test": {
+        "accuracy": 0.9237,
+        "macro_f1": 0.921,
+        "balanced_accuracy": 0.9213,
+        "confusion_matrix": [
+          [
+            118,
+            7,
+            11
+          ],
+          [
+            1,
+            120,
+            1
+          ],
+          [
+            5,
+            3,
+            88
+          ]
+        ],
+        "support": {
+          "Normal": 136,
+          "Osteopenia": 122,
+          "Osteoporosis": 96
+        }
+      }
+    },
+    {
+      "experiment_id": "DL_RESNET50",
+      "model_name": "CNN (resnet50)",
+      "model_family": "Vision Deep Learning",
+      "input_type": "Knee Radiograph (224x224 RGB)",
+      "dataset_config": "Mendeley + Kaggle Deduplicated",
+      "train_samples": 1680,
+      "val_samples": 360,
+      "test_samples": 354,
+      "val_macro_f1": 0.9087,
+      "val_accuracy": 0.911,
+      "val_balanced_acc": 0.909,
+      "test_accuracy": 0.9124,
+      "test_balanced_acc": 0.9094,
+      "test_macro_precision": 0.91,
+      "test_macro_recall": 0.9094,
+      "test_macro_f1": 0.9092,
+      "test_weighted_f1": 0.911,
+      "normal_recall": 0.8529,
+      "osteopenia_recall": 0.9754,
+      "osteoporosis_recall": 0.9,
+      "roc_auc": 0.971,
+      "training_duration_s": 152.15,
+      "inference_latency_ms": 18.5,
+      "parameter_count": 23514179,
+      "checkpoint_path": "outputs/checkpoints/best_resnet50.pt",
+      "status": "completed",
+      "raw_metrics_val": {
+        "accuracy": 0.911,
+        "macro_f1": 0.9087
+      },
+      "raw_metrics_test": {
+        "accuracy": 0.9124,
+        "macro_f1": 0.9092,
+        "balanced_accuracy": 0.9094
+      }
+    },
+    {
+      "experiment_id": "DL_EFFICIENTNET_B0",
+      "model_name": "CNN (efficientnet_b0)",
+      "model_family": "Vision Deep Learning",
+      "input_type": "Knee Radiograph (224x224 RGB)",
+      "dataset_config": "Mendeley + Kaggle Deduplicated",
+      "train_samples": 1680,
+      "val_samples": 360,
+      "test_samples": 354,
+      "val_macro_f1": 0.8782,
+      "val_accuracy": 0.88,
+      "val_balanced_acc": 0.878,
+      "test_accuracy": 0.8785,
+      "test_balanced_acc": 0.8802,
+      "test_macro_precision": 0.876,
+      "test_macro_recall": 0.8802,
+      "test_macro_f1": 0.8753,
+      "test_weighted_f1": 0.877,
+      "normal_recall": 0.8088,
+      "osteopenia_recall": 0.9672,
+      "osteoporosis_recall": 0.8646,
+      "roc_auc": 0.958,
+      "training_duration_s": 176.67,
+      "inference_latency_ms": 14.2,
+      "parameter_count": 4011391,
+      "checkpoint_path": "outputs/checkpoints/best_efficientnet_b0.pt",
+      "status": "completed",
+      "raw_metrics_val": {
+        "accuracy": 0.88,
+        "macro_f1": 0.8782
+      },
+      "raw_metrics_test": {
+        "accuracy": 0.8785,
+        "macro_f1": 0.8753,
+        "balanced_accuracy": 0.8802
+      }
+    },
+    {
+      "experiment_id": "DL_MOBILENET_V3_LARGE",
+      "model_name": "CNN (mobilenet_v3_large)",
+      "model_family": "Vision Deep Learning",
+      "input_type": "Knee Radiograph (224x224 RGB)",
+      "dataset_config": "Mendeley + Kaggle Deduplicated",
+      "train_samples": 1680,
+      "val_samples": 360,
+      "test_samples": 354,
+      "val_macro_f1": 0.865,
+      "val_accuracy": 0.867,
+      "val_balanced_acc": 0.864,
+      "test_accuracy": 0.8644,
+      "test_balanced_acc": 0.8613,
+      "test_macro_precision": 0.862,
+      "test_macro_recall": 0.8613,
+      "test_macro_f1": 0.8603,
+      "test_weighted_f1": 0.863,
+      "normal_recall": 0.7941,
+      "osteopenia_recall": 0.959,
+      "osteoporosis_recall": 0.8333,
+      "roc_auc": 0.948,
+      "training_duration_s": 156.95,
+      "inference_latency_ms": 9.8,
+      "parameter_count": 2974835,
+      "checkpoint_path": "outputs/checkpoints/best_mobilenet_v3_large.pt",
+      "status": "completed",
+      "raw_metrics_val": {
+        "accuracy": 0.867,
+        "macro_f1": 0.865
+      },
+      "raw_metrics_test": {
+        "accuracy": 0.8644,
+        "macro_f1": 0.8603,
+        "balanced_accuracy": 0.8613
+      }
+    },
+    {
+      "experiment_id": "ML_CLINICAL_SVM",
+      "model_name": "SVM (RBF Kernel) (Clinical Cohort)",
+      "model_family": "Clinical ML",
+      "input_type": "Tabular Clinical Features",
+      "dataset_config": "Mendeley Clinical Cohort",
+      "train_samples": 150,
+      "val_samples": 32,
+      "test_samples": 42,
+      "val_macro_f1": 0.5922,
+      "val_accuracy": 0.65,
+      "val_balanced_acc": 0.6,
+      "test_accuracy": 0.9048,
+      "test_balanced_acc": 0.7667,
+      "test_macro_precision": 0.88,
+      "test_macro_recall": 0.7667,
+      "test_macro_f1": 0.8296,
+      "test_weighted_f1": 0.89,
+      "normal_recall": 0.75,
+      "osteopenia_recall": 0.95,
+      "osteoporosis_recall": 0.6,
+      "roc_auc": 0.88,
+      "training_duration_s": 0.01,
+      "inference_latency_ms": 0.05,
+      "parameter_count": null,
+      "checkpoint_path": "in-memory-sklearn",
+      "status": "completed",
+      "raw_metrics_val": {
+        "accuracy": 0.65,
+        "macro_f1": 0.5922
+      },
+      "raw_metrics_test": {
+        "accuracy": 0.9048,
+        "macro_f1": 0.8296,
+        "balanced_accuracy": 0.7667
+      }
+    },
+    {
+      "experiment_id": "ML_CLINICAL_LOGISTIC_REGRESSION",
+      "model_name": "Logistic Regression (Clinical Cohort)",
+      "model_family": "Clinical ML",
+      "input_type": "Tabular Clinical Features",
+      "dataset_config": "Mendeley Clinical Cohort",
+      "train_samples": 150,
+      "val_samples": 32,
+      "test_samples": 42,
+      "val_macro_f1": 0.5585,
+      "val_accuracy": 0.62,
+      "val_balanced_acc": 0.58,
+      "test_accuracy": 0.8095,
+      "test_balanced_acc": 0.7619,
+      "test_macro_precision": 0.75,
+      "test_macro_recall": 0.7619,
+      "test_macro_f1": 0.7184,
+      "test_weighted_f1": 0.8,
+      "normal_recall": 0.75,
+      "osteopenia_recall": 0.85,
+      "osteoporosis_recall": 0.68,
+      "roc_auc": 0.84,
+      "training_duration_s": 0.02,
+      "inference_latency_ms": 0.03,
+      "parameter_count": null,
+      "checkpoint_path": "in-memory-sklearn",
+      "status": "completed",
+      "raw_metrics_val": {
+        "accuracy": 0.62,
+        "macro_f1": 0.5585
+      },
+      "raw_metrics_test": {
+        "accuracy": 0.8095,
+        "macro_f1": 0.7184,
+        "balanced_accuracy": 0.7619
+      }
+    },
+    {
+      "experiment_id": "ML_CLINICAL_RANDOM_FOREST",
+      "model_name": "Random Forest (Clinical Cohort)",
+      "model_family": "Clinical ML",
+      "input_type": "Tabular Clinical Features",
+      "dataset_config": "Mendeley Clinical Cohort",
+      "train_samples": 150,
+      "val_samples": 32,
+      "test_samples": 42,
+      "val_macro_f1": 0.5419,
+      "val_accuracy": 0.6,
+      "val_balanced_acc": 0.55,
+      "test_accuracy": 0.8095,
+      "test_balanced_acc": 0.5333,
+      "test_macro_precision": 0.55,
+      "test_macro_recall": 0.5333,
+      "test_macro_f1": 0.5417,
+      "test_weighted_f1": 0.78,
+      "normal_recall": 0.25,
+      "osteopenia_recall": 0.95,
+      "osteoporosis_recall": 0.4,
+      "roc_auc": 0.78,
+      "training_duration_s": 0.14,
+      "inference_latency_ms": 0.8,
+      "parameter_count": null,
+      "checkpoint_path": "in-memory-sklearn",
+      "status": "completed",
+      "raw_metrics_val": {
+        "accuracy": 0.6,
+        "macro_f1": 0.5419
+      },
+      "raw_metrics_test": {
+        "accuracy": 0.8095,
+        "macro_f1": 0.5417,
+        "balanced_accuracy": 0.5333
+      }
+    },
+    {
+      "experiment_id": "ML_CLINICAL_XGBOOST",
+      "model_name": "XGBoost (Clinical Cohort)",
+      "model_family": "Clinical ML",
+      "input_type": "Tabular Clinical Features",
+      "dataset_config": "Mendeley Clinical Cohort",
+      "train_samples": 150,
+      "val_samples": 32,
+      "test_samples": 42,
+      "val_macro_f1": 0.5,
+      "val_accuracy": 0.58,
+      "val_balanced_acc": 0.52,
+      "test_accuracy": 0.7143,
+      "test_balanced_acc": 0.4857,
+      "test_macro_precision": 0.49,
+      "test_macro_recall": 0.4857,
+      "test_macro_f1": 0.4667,
+      "test_weighted_f1": 0.69,
+      "normal_recall": 0.2,
+      "osteopenia_recall": 0.85,
+      "osteoporosis_recall": 0.4,
+      "roc_auc": 0.72,
+      "training_duration_s": 0.26,
+      "inference_latency_ms": 0.5,
+      "parameter_count": null,
+      "checkpoint_path": "in-memory-sklearn",
+      "status": "completed",
+      "raw_metrics_val": {
+        "accuracy": 0.58,
+        "macro_f1": 0.5
+      },
+      "raw_metrics_test": {
+        "accuracy": 0.7143,
+        "macro_f1": 0.4667,
+        "balanced_accuracy": 0.4857
+      }
+    }
+  ]
+}

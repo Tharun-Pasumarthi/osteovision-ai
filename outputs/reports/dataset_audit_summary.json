@@ -1,0 +1,21 @@
+{
+  "total_images_discovered": 7586,
+  "sources": {
+    "mendeley": 239,
+    "kaggle_gobara": 1947,
+    "zenodo": 5400
+  },
+  "exact_sha256_duplicates": 4372,
+  "quarantined_label_conflict_files": 704,
+  "quarantined_label_conflict_groups": 158,
+  "clean_authentic_unique_radiographs": 865,
+  "clean_class_distribution": {
+    "Normal": 350,
+    "Osteoporosis": 326,
+    "Osteopenia": 189
+  },
+  "unaccessible_hospital_cohorts": {
+    "PMC11375658_jintan_hospital": "Hospital-restricted PHI under IRB #2022098; OSF repository 404; strictly excluded from counts",
+    "PMC11375658_soochow_university": "Hospital-restricted PHI under IRB #2022098; OSF repository 404; strictly excluded from counts"
+  }
+}

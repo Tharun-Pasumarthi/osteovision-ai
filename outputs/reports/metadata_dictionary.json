@@ -1,0 +1,86 @@
+{
+  "features": {
+    "age": {
+      "description": "Age of participant in years",
+      "type": "numerical",
+      "imputation": "median"
+    },
+    "height_m": {
+      "description": "Height in meters",
+      "type": "numerical",
+      "imputation": "median"
+    },
+    "weight_kg": {
+      "description": "Body weight in kilograms",
+      "type": "numerical",
+      "imputation": "median"
+    },
+    "bmi": {
+      "description": "Body Mass Index (kg/m^2)",
+      "type": "numerical",
+      "imputation": "median"
+    },
+    "menopause_age": {
+      "description": "Age at menopause in years for female subjects",
+      "type": "numerical",
+      "imputation": "median"
+    },
+    "max_walking_km": {
+      "description": "Maximum daily walking distance in km",
+      "type": "numerical",
+      "imputation": "median"
+    },
+    "gender_female": {
+      "description": "Indicator: 1.0 for female, 0.0 for male",
+      "type": "binary",
+      "imputation": "mode"
+    },
+    "joint_pain": {
+      "description": "Presence of joint pain (1.0 = yes, 0.0 = no)",
+      "type": "binary",
+      "imputation": "mode"
+    },
+    "smoker": {
+      "description": "Smoking history (1.0 = yes, 0.0 = no)",
+      "type": "binary",
+      "imputation": "mode"
+    },
+    "diabetic": {
+      "description": "Diagnosed diabetes mellitus (1.0 = yes, 0.0 = no)",
+      "type": "binary",
+      "imputation": "mode"
+    },
+    "hypothyroidism": {
+      "description": "Diagnosed hypothyroidism (1.0 = yes, 0.0 = no)",
+      "type": "binary",
+      "imputation": "mode"
+    },
+    "history_of_fracture": {
+      "description": "History of bone fractures (1.0 = yes, 0.0 = no)",
+      "type": "binary",
+      "imputation": "mode"
+    },
+    "family_history_osteoporosis": {
+      "description": "Family history of osteoporosis (1.0 = yes, 0.0 = no)",
+      "type": "binary",
+      "imputation": "mode"
+    },
+    "is_menopausal": {
+      "description": "Menopausal status indicator",
+      "type": "binary",
+      "imputation": "mode"
+    },
+    "obesity_category": {
+      "description": "WHO BMI classification category (One-hot encoded)",
+      "type": "categorical",
+      "imputation": "unknown"
+    }
+  },
+  "excluded_target_leakage_fields": [
+    "T-score Value (Directly determines osteopenia/osteoporosis diagnosis)",
+    "Z-Score Value (Bone density reference score)",
+    "Diagnosis (Target label to be predicted)",
+    "Patient Id / S.No (Identification variables)",
+    "Site (Constant acquisition field)"
+  ]
+}
