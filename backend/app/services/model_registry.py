@@ -1,10 +1,11 @@
 """
-Model Registry Service for preloading and caching trained PyTorch checkpoints.
+Model Registry Service with Lazy Loading and Memory Optimization for Containerized Environments.
 """
 import os
+import gc
 import pickle
 import logging
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional, Tuple, Set
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -15,6 +16,12 @@ from backend.app.config import settings
 from backend.app.schemas.models import ModelMetadata
 
 logger = logging.getLogger(__name__)
+
+# Single thread to keep memory overhead minimal on 512MB RAM instances
+try:
+    torch.set_num_threads(1)
+except Exception:
+    pass
 
 class ModelRegistry:
     def __init__(self):
@@ -97,11 +104,19 @@ class ModelRegistry:
             },
         }
 
+        # Shared checkpoint groups to prevent duplicate in-memory copies
+        self._shared_aliases = {
+            "adaptive_fusion": "densenet121",
+            "densenet121": "adaptive_fusion",
+            "multimodal_fusion": "cm_graf_v2",
+            "cm_graf_v2": "multimodal_fusion",
+        }
+
     def load_all(self):
-        """Preload all trained checkpoints into memory on startup."""
+        """Lightweight startup initialization to strictly respect low RAM quotas (e.g. 512MB)."""
         logger.info(f"Initializing ModelRegistry on device: {self.device}")
         
-        # 1. Load benchmark report if available
+        # 1. Load benchmark report if available (~10 KB)
         benchmark_csv = settings.REPORTS_DIR / "model_baseline_comparison.csv"
         if benchmark_csv.exists():
             try:
@@ -110,7 +125,7 @@ class ModelRegistry:
             except Exception as e:
                 logger.warning(f"Could not load benchmark CSV: {e}")
 
-        # 2. Load Clinical Preprocessor
+        # 2. Load Clinical Preprocessor (~1 KB)
         prep_path = settings.CHECKPOINTS_DIR / "clinical_preprocessor.pkl"
         if prep_path.exists():
             try:
@@ -122,7 +137,7 @@ class ModelRegistry:
         else:
             logger.warning(f"Clinical preprocessor not found at {prep_path}")
 
-        # 3. Load Clinical Classifier Model
+        # 3. Load Clinical Classifier Model (~680 KB)
         clin_model_path = settings.CHECKPOINTS_DIR / "best_clinical_model.pkl"
         if clin_model_path.exists():
             try:
@@ -134,49 +149,112 @@ class ModelRegistry:
         else:
             logger.warning(f"Clinical model not found at {clin_model_path}")
 
-        # 4. Load PyTorch model weights
-        for model_id, config in self.checkpoints_config.items():
-            ckpt_path = config["checkpoint"]
-            if not ckpt_path.exists():
-                logger.warning(f"Checkpoint for {model_id} does not exist at {ckpt_path}")
-                continue
+        # Preload the default champion model to be immediately ready for inference
+        try:
+            self.load_model(settings.DEFAULT_MODEL_ID)
+        except Exception as e:
+            logger.warning(f"Could not preload default model '{settings.DEFAULT_MODEL_ID}': {e}")
 
-            try:
-                if config["type"] in ("cnn", "adaptive_fusion"):
-                    model = KneeXRayCNNClassifier(
-                        backbone_name=config["backbone"],
-                        num_classes=3,
-                        pretrained=False,
-                    )
-                elif config["type"] == "multimodal":
-                    model = DeepMultimodalFusionClassifier(
-                        clinical_dim=13,
-                        num_classes=3,
-                    )
-                else:
-                    continue
+        # Force garbage collection to keep baseline RSS minimal (~180MB)
+        gc.collect()
+        logger.info(f"Baseline startup complete with default model '{settings.DEFAULT_MODEL_ID}'. Other neural vision models will load on-demand.")
 
-                raw_ckpt = torch.load(ckpt_path, map_location=self.device)
-                state_dict = raw_ckpt.get("model_state_dict", raw_ckpt) if isinstance(raw_ckpt, dict) else raw_ckpt
-                model.load_state_dict(state_dict)
-                model.to(self.device)
-                model.eval()
-                temp = 1.0
-                if isinstance(raw_ckpt, dict) and "temperature" in raw_ckpt:
-                    try:
-                        temp = float(raw_ckpt["temperature"])
-                    except Exception:
-                        temp = 1.0
-                self.temperatures[model_id] = temp
-                self.loaded_models[model_id] = model
-                logger.info(f"Loaded {model_id} successfully (calibration temp={temp:.3f}).")
-            except Exception as e:
-                logger.error(f"Error loading checkpoint for {model_id}: {e}")
+    def load_model(self, model_id: str) -> Optional[nn.Module]:
+        """Load a specific neural network model on demand while evicting older models to stay < 512MB RAM."""
+        if model_id in self.loaded_models:
+            return self.loaded_models[model_id]
+
+        # Check if an alias sharing the same checkpoint is already in memory
+        alias = self._shared_aliases.get(model_id)
+        if alias and alias in self.loaded_models:
+            model = self.loaded_models[alias]
+            self.loaded_models[model_id] = model
+            self.temperatures[model_id] = self.temperatures.get(alias, 1.0)
+            return model
+
+        if model_id not in self.checkpoints_config:
+            logger.error(f"Unknown model_id requested: {model_id}")
+            return None
+
+        config = self.checkpoints_config[model_id]
+        ckpt_path = config["checkpoint"]
+        if not ckpt_path.exists():
+            logger.warning(f"Checkpoint for {model_id} does not exist at {ckpt_path}")
+            return None
+
+        # Evict other loaded vision models to stay strictly within 512MB RAM
+        allowed_keep: Set[str] = {model_id}
+        if alias:
+            allowed_keep.add(alias)
+
+        evict_keys = [k for k in list(self.loaded_models.keys()) if k not in allowed_keep]
+        for old_k in evict_keys:
+            logger.info(f"Memory optimization: Evicting model '{old_k}' from RAM.")
+            del self.loaded_models[old_k]
+            if old_k in self.temperatures:
+                del self.temperatures[old_k]
+
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        logger.info(f"Loading checkpoint on-demand for '{model_id}' from {ckpt_path.name}...")
+        try:
+            if config["type"] in ("cnn", "adaptive_fusion"):
+                model = KneeXRayCNNClassifier(
+                    backbone_name=config["backbone"],
+                    num_classes=3,
+                    pretrained=False,
+                )
+            elif config["type"] == "multimodal":
+                model = DeepMultimodalFusionClassifier(
+                    clinical_dim=13,
+                    num_classes=3,
+                )
+            else:
+                return None
+
+            raw_ckpt = torch.load(ckpt_path, map_location=self.device)
+            state_dict = raw_ckpt.get("model_state_dict", raw_ckpt) if isinstance(raw_ckpt, dict) else raw_ckpt
+            model.load_state_dict(state_dict)
+            model.to(self.device)
+            model.eval()
+
+            temp = 1.0
+            if isinstance(raw_ckpt, dict) and "temperature" in raw_ckpt:
+                try:
+                    temp = float(raw_ckpt["temperature"])
+                except Exception:
+                    temp = 1.0
+
+            # Clean temporary loading references
+            del raw_ckpt
+            del state_dict
+            gc.collect()
+
+            self.temperatures[model_id] = temp
+            self.loaded_models[model_id] = model
+
+            # Register alias to share memory
+            if alias:
+                self.loaded_models[alias] = model
+                self.temperatures[alias] = temp
+
+            logger.info(f"Successfully loaded '{model_id}' (calibration temp={temp:.3f}). Active in memory.")
+            return model
+        except Exception as e:
+            logger.error(f"Error loading checkpoint for '{model_id}': {e}", exc_info=True)
+            return None
 
     def get_model(self, model_id: str) -> Optional[nn.Module]:
-        return self.loaded_models.get(model_id)
+        """Retrieve model, dynamically loading it if not currently resident in RAM."""
+        if model_id in self.loaded_models:
+            return self.loaded_models[model_id]
+        return self.load_model(model_id)
 
     def get_temperature(self, model_id: str) -> float:
+        if model_id not in self.temperatures and model_id in self.checkpoints_config:
+            self.load_model(model_id)
         return self.temperatures.get(model_id, 1.0)
 
     def get_target_layer(self, model_id: str) -> Optional[nn.Module]:
@@ -192,12 +270,10 @@ class ModelRegistry:
         elif model_id == "mobilenet_v3_large":
             return model.features[-1]
         elif model_id == "resnet50":
-            return model.features[-1][-1].conv3
+            return model.layer4[-1]
         elif model_id in ("multimodal_fusion", "cm_graf_v2"):
-            if hasattr(model, "image_encoder"):
-                return model.image_encoder.features.norm5
-            elif hasattr(model, "features"):
-                return model.features.norm5
+            if hasattr(model, "cnn") and hasattr(model.cnn, "features"):
+                return model.cnn.features.norm5
             return None
         return None
 
@@ -233,6 +309,8 @@ class ModelRegistry:
             latency = float(row["inference_latency_ms"]) if row is not None and pd.notnull(row.get("inference_latency_ms")) else None
             params = float(row["parameter_count"]) if row is not None and pd.notnull(row.get("parameter_count")) else None
 
+            checkpoint_exists = config["checkpoint"].exists()
+
             metadata_list.append(ModelMetadata(
                 id=model_id,
                 name=config["name"],
@@ -240,7 +318,7 @@ class ModelRegistry:
                 input_type="image_plus_clinical" if config["supports_clinical"] else "image_only",
                 supports_clinical=config["supports_clinical"],
                 gradcam_supported=config["gradcam_supported"],
-                checkpoint_available=model_id in self.loaded_models,
+                checkpoint_available=checkpoint_exists,
                 checkpoint_path=str(config["checkpoint"]),
                 test_accuracy=test_acc,
                 test_macro_f1=test_f1,
