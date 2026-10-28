@@ -35,7 +35,7 @@ COPY backend ./backend
 COPY src ./src
 COPY configs ./configs
 COPY outputs ./outputs
-COPY data/metadata ./data/metadata
+RUN mkdir -p /app/data/metadata
 
 # Copy built frontend SPA from builder stage
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
