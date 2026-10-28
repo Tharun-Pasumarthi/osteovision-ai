@@ -1,3 +1,13 @@
+---
+title: OsteoVision AI - Knee X-Ray & Clinical Osteoporosis Screening API
+emoji: 🦴
+colorFrom: teal
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+---
 # Deep Learning-Based Knee X-Ray Classification for Osteoporosis Screening with Explainable AI
 
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)

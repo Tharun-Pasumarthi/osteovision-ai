@@ -1,0 +1,34 @@
+# Git & IDE
+.git
+.github
+.gitignore
+.vscode
+.idea
+
+# Node.js dependencies (built in stage 1)
+node_modules
+frontend/node_modules
+
+# Python cache & virtual environments
+__pycache__
+*.py[cod]
+*$py.class
+*.pyd
+.pytest_cache
+.coverage
+htmlcov
+venv
+env
+
+# Large raw datasets (not needed for inference)
+data/raw/
+data/balanced_cohort_2400/
+*.zip
+*.rar
+*.tar.gz
+
+# Local secrets & builds
+.env
+.env.local
+*.log
+.vercel
