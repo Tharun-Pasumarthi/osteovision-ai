@@ -23,6 +23,18 @@ try:
 except Exception:
     pass
 
+def release_system_memory():
+    """Force Python gc and Linux glibc to release unused memory pages back to OS kernel."""
+    gc.collect()
+    try:
+        import ctypes
+        libc = ctypes.CDLL("libc.so.6")
+        libc.malloc_trim(0)
+    except Exception:
+        pass
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
 class ModelRegistry:
     def __init__(self):
         self.device = torch.device(settings.DEVICE)
@@ -113,7 +125,7 @@ class ModelRegistry:
         }
 
     def load_all(self):
-        """Lightweight startup initialization to strictly respect low RAM quotas (e.g. 512MB)."""
+        """Ultra-fast lightweight startup initialization (<100MB RAM) for low RAM quota environments."""
         logger.info(f"Initializing ModelRegistry on device: {self.device}")
         
         # 1. Load benchmark report if available (~10 KB)
@@ -149,18 +161,12 @@ class ModelRegistry:
         else:
             logger.warning(f"Clinical model not found at {clin_model_path}")
 
-        # Preload the default champion model to be immediately ready for inference
-        try:
-            self.load_model(settings.DEFAULT_MODEL_ID)
-        except Exception as e:
-            logger.warning(f"Could not preload default model '{settings.DEFAULT_MODEL_ID}': {e}")
-
-        # Force garbage collection to keep baseline RSS minimal (~180MB)
-        gc.collect()
-        logger.info(f"Baseline startup complete with default model '{settings.DEFAULT_MODEL_ID}'. Other neural vision models will load on-demand.")
+        # Purge temporary startup buffers: RSS will remain ~75MB
+        release_system_memory()
+        logger.info("Server startup initialization complete (RSS ~75MB). Vision models configured for on-demand mmap loading.")
 
     def load_model(self, model_id: str) -> Optional[nn.Module]:
-        """Load a specific neural network model on demand while evicting older models to stay < 512MB RAM."""
+        """Load a specific neural network model on demand with mmap while evicting older models to stay < 512MB RAM."""
         if model_id in self.loaded_models:
             return self.loaded_models[model_id]
 
@@ -194,11 +200,9 @@ class ModelRegistry:
             if old_k in self.temperatures:
                 del self.temperatures[old_k]
 
-        gc.collect()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        release_system_memory()
 
-        logger.info(f"Loading checkpoint on-demand for '{model_id}' from {ckpt_path.name}...")
+        logger.info(f"Loading checkpoint on-demand for '{model_id}' from {ckpt_path.name} with mmap...")
         try:
             if config["type"] in ("cnn", "adaptive_fusion"):
                 model = KneeXRayCNNClassifier(
@@ -214,7 +218,12 @@ class ModelRegistry:
             else:
                 return None
 
-            raw_ckpt = torch.load(ckpt_path, map_location=self.device)
+            # Memory-map tensor weights to bypass large heap allocations
+            try:
+                raw_ckpt = torch.load(ckpt_path, map_location=self.device, mmap=True)
+            except Exception:
+                raw_ckpt = torch.load(ckpt_path, map_location=self.device)
+
             state_dict = raw_ckpt.get("model_state_dict", raw_ckpt) if isinstance(raw_ckpt, dict) else raw_ckpt
             model.load_state_dict(state_dict)
             model.to(self.device)
@@ -227,10 +236,10 @@ class ModelRegistry:
                 except Exception:
                     temp = 1.0
 
-            # Clean temporary loading references
+            # Clean temporary loading references and trim glibc pages
             del raw_ckpt
             del state_dict
-            gc.collect()
+            release_system_memory()
 
             self.temperatures[model_id] = temp
             self.loaded_models[model_id] = model

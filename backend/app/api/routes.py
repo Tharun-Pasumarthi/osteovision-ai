@@ -41,7 +41,7 @@ async def get_health():
         app_name=settings.APP_NAME,
         app_version=settings.APP_VERSION,
         device=str(registry.device),
-        models_loaded=list(registry.loaded_models.keys()),
+        models_loaded=(list(registry.loaded_models.keys()) + (["clinical_model"] if registry.clinical_model is not None else [])),
         checkpoints_found=checkpoints_found,
     )
 
