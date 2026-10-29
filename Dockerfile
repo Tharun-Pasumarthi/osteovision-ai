@@ -1,23 +1,11 @@
 # =====================================================================
-# Multi-stage Dockerfile for Osteoporosis Screening Application
-# Stage 1: Build React/Vite Frontend
-# Stage 2: Production Python/FastAPI Backend Serving API & Static SPA
+# Production Python/FastAPI Backend for Osteoporosis Screening
+# Optimized for CPU Cloud Hosting (Render, Railway, Hugging Face)
 # =====================================================================
 
-# Stage 1: Frontend Build
-FROM node:22-alpine AS frontend-builder
-WORKDIR /app/frontend
+FROM python:3.12-slim
 
-COPY frontend/package*.json ./
-RUN npm ci
-
-COPY frontend/ ./
-RUN npm run build
-
-# Stage 2: Production Backend & Runner
-FROM python:3.12-slim AS runner
-
-# Install system dependencies (libglib, libgl for OpenCV)
+# Install essential system dependencies (libglib, libgl for OpenCV)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
@@ -26,21 +14,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy python requirements and install
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# Install CPU-only PyTorch (~180MB instead of 2.8GB CUDA bundle)
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
-# Copy backend application, ML pipelines, and configurations
+# Copy and install remaining Python dependencies
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+
+# Copy backend application code, ML pipelines, and configurations
 COPY backend ./backend
 COPY src ./src
 COPY configs ./configs
 COPY outputs ./outputs
 RUN mkdir -p /app/data/metadata
 
-# Copy built frontend SPA from builder stage
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
-
-# Set production environment variables
+# Production environment variables: single-thread OpenMP to respect 512MB RAM
 ENV HOST=0.0.0.0 \
     PORT=10000 \
     PYTHONUNBUFFERED=1 \
@@ -56,4 +44,3 @@ EXPOSE 10000 7860
 
 # Start FastAPI server
 CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
-
