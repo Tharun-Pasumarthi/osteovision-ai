@@ -42,7 +42,7 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 
 # Set production environment variables
 ENV HOST=0.0.0.0 \
-    PORT=7860 \
+    PORT=10000 \
     PYTHONUNBUFFERED=1 \
     USE_CUDA=0 \
     OMP_NUM_THREADS=1 \
@@ -52,12 +52,8 @@ ENV HOST=0.0.0.0 \
     NUMEXPR_NUM_THREADS=1 \
     TORCH_NUM_THREADS=1
 
-EXPOSE 7860
-
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:7860/api/health || exit 1
+EXPOSE 10000 7860
 
 # Start FastAPI server
-CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-7860}"]
+CMD ["sh", "-c", "uvicorn backend.app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
 
