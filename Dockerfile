@@ -26,6 +26,7 @@ COPY backend ./backend
 COPY src ./src
 COPY configs ./configs
 COPY outputs ./outputs
+COPY frontend/dist ./frontend/dist
 RUN mkdir -p /app/data/metadata
 
 # Production environment variables: single-thread OpenMP to respect 512MB RAM

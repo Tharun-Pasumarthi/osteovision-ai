@@ -99,6 +99,11 @@ async def catch_all_spa(full_path: str, request: Request):
     """Fallback handler for Single Page Application client-side routing."""
     if full_path.startswith("api") or full_path.startswith("outputs") or full_path.startswith("docs") or full_path == "openapi.json":
         return JSONResponse(status_code=404, content={"detail": f"Path '/{full_path}' not found."})
+
+    file_path = settings.FRONTEND_DIST_DIR / full_path
+    if file_path.is_file():
+        return FileResponse(file_path)
+
     index_file = settings.FRONTEND_DIST_DIR / "index.html"
     if index_file.exists():
         return FileResponse(index_file)

@@ -13,11 +13,12 @@ htmlcov/
 node_modules/
 frontend/node_modules/
 dist/
-frontend/dist/
 frontend/dist-ssr/
 *.tsbuildinfo
 .vercel/
 frontend/.vercel/
+!frontend/dist/
+!frontend/dist/**
 
 # Large Model Checkpoints
 *.pth
