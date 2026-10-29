@@ -79,6 +79,9 @@ class GradCAMService:
         with GradCAM(model, target_layer) as cam:
             heatmap, pred_idx, probs, cam_status = cam.generate_heatmap(tensor, target_class=target_class_idx)
 
+        del tensor
+        registry.release_system_memory()
+
         explained_class_idx = target_class_idx if target_class_idx is not None else pred_idx
         explained_class_name = CLASS_NAMES[explained_class_idx]
         pred_class_name = CLASS_NAMES[pred_idx]

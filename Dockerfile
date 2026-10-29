@@ -44,7 +44,13 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 ENV HOST=0.0.0.0 \
     PORT=7860 \
     PYTHONUNBUFFERED=1 \
-    USE_CUDA=0
+    USE_CUDA=0 \
+    OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    VECLIB_MAXIMUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1 \
+    TORCH_NUM_THREADS=1
 
 EXPOSE 7860
 

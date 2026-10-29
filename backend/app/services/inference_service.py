@@ -174,7 +174,7 @@ class InferenceService:
         # Run inference and measure duration
         start_time = time.perf_counter()
         calib_note = ""
-        with torch.no_grad():
+        with torch.inference_mode():
             if model_id in ("multimodal_fusion", "cm_graf_v2"):
                 # Forward pass through multimodal architecture
                 logits = model(img_tensor, clin_tensor)
@@ -282,6 +282,11 @@ class InferenceService:
             rationale_parts.append(f"Presumptive {pred_label} detected. DXA bone mineral density assessment recommended for definitive diagnostic confirmation.")
 
         review_rationale = " ".join(rationale_parts) if review_needed else "High-confidence prediction consistent with normal bone mineral density features."
+
+        del img_tensor
+        if clin_tensor is not None:
+            del clin_tensor
+        registry.release_system_memory()
 
         # Get friendly model name
         model_name = registry.checkpoints_config.get(model_id, {}).get("name", model_id)

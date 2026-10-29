@@ -2,6 +2,19 @@
 FastAPI Main Application Entry Point for Knee X-Ray Osteoporosis Classification.
 """
 import os
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["TORCH_NUM_THREADS"] = "1"
+
+import torch
+try:
+    torch.set_num_threads(1)
+    torch.set_num_interop_threads(1)
+except Exception:
+    pass
 import sys
 from pathlib import Path
 from contextlib import asynccontextmanager

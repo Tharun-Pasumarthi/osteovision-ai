@@ -36,6 +36,8 @@ def release_system_memory():
         torch.cuda.empty_cache()
 
 class ModelRegistry:
+    def release_system_memory(self):
+        release_system_memory()
     def __init__(self):
         self.device = torch.device(settings.DEVICE)
         self.loaded_models: Dict[str, nn.Module] = {}
