@@ -13,6 +13,7 @@ import torch
 from src.image_transforms import KneeXRayEvalTransform
 from backend.app.services.model_registry import registry
 from backend.app.schemas.models import PredictionResponse, ClinicalInputSchema
+from backend.app.services.image_quality_service import image_quality_service
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +72,12 @@ class InferenceService:
 
         feat_np = tensor.cpu().numpy()
         probs = registry.clinical_model.predict_proba(feat_np)[0]
+        # Extract uncalibrated raw tree voting probabilities
+        rf = getattr(registry.clinical_model, "calibrated_classifiers_", None)
+        if rf and len(rf) > 0:
+            raw_tree_probs = rf[0].estimator.predict_proba(feat_np)[0]
+        else:
+            raw_tree_probs = probs
 
         pred_idx = int(np.argmax(probs))
         pred_label = CLASS_NAMES[pred_idx]
@@ -99,6 +106,11 @@ class InferenceService:
                 "Normal": float(probs[0]),
                 "Osteopenia": float(probs[1]),
                 "Osteoporosis": float(probs[2]),
+            },
+            raw_probabilities={
+                "Normal": float(raw_tree_probs[0]),
+                "Osteopenia": float(raw_tree_probs[1]),
+                "Osteoporosis": float(raw_tree_probs[2]),
             },
             model_id="clinical_13feat_model",
             model_name="Clinical Model Prediction",
@@ -139,6 +151,12 @@ class InferenceService:
         model = registry.get_model(model_id)
         if model is None:
             raise ValueError(f"Model '{model_id}' is not loaded or does not exist.")
+
+        # 1. Pre-inference Image Quality Screening
+        quality_res = image_quality_service.assess_image(image_bytes, filename)
+        if not quality_res.get("can_proceed_to_inference", True):
+            issues_str = "; ".join(quality_res.get("issues", ["Severe image degradation detected"]))
+            raise ValueError(f"Image Quality Screening failed ({issues_str}). Pre-inference check prevented processing.")
 
         # Decode image
         try:
@@ -295,6 +313,11 @@ class InferenceService:
             predicted_label=pred_label,
             confidence=confidence,
             probabilities={
+                "Normal": float(calib_probs[0]),
+                "Osteopenia": float(calib_probs[1]),
+                "Osteoporosis": float(calib_probs[2]),
+            },
+            raw_probabilities={
                 "Normal": float(raw_probs[0]),
                 "Osteopenia": float(raw_probs[1]),
                 "Osteoporosis": float(raw_probs[2]),
@@ -324,6 +347,7 @@ class InferenceService:
                 "height": height,
                 "format": img_format,
             },
+            image_quality=quality_res,
             disclaimer="Research prototype only. Model outputs are experimental and are not a substitute for professional clinical DXA assessment.",
         )
 

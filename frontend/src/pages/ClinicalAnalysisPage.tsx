@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Stethoscope,
   BarChart2,
@@ -9,298 +9,518 @@ import {
   Scale,
   Calendar,
   Activity,
+  Sparkles,
+  AlertCircle,
+  HelpCircle,
+  ShieldCheck,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from 'recharts';
 import { api } from '../services/api';
-import { ClinicalFeatureImportance } from '../types/api';
+import {
+  PredictionResponse,
+  ClinicalFeatures,
+  ShapExplanationResponse,
+  GlobalFeatureImportanceItem,
+} from '../types/api';
 import { Card, CardHeader, CardContent } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { NumericInputField } from '../components/clinical/NumericInputField';
+import { HeightConverter } from '../components/clinical/HeightConverter';
+import { BmiCalculator } from '../components/clinical/BmiCalculator';
+import { MenopauseSelector, MenopausalStatus } from '../components/clinical/MenopauseSelector';
+import { WalkingDistanceConverter } from '../components/clinical/WalkingDistanceConverter';
+
+const CLASS_CONFIG = {
+  Normal: {
+    variant: 'normal' as const,
+    bg: 'bg-emerald-500',
+    lightBg: 'bg-emerald-50 dark:bg-emerald-950/40',
+    text: 'text-emerald-700 dark:text-emerald-300',
+    border: 'border-emerald-200 dark:border-emerald-800',
+    desc: 'Clinical risk indicators are consistent with preserved bone mineral density.',
+  },
+  Osteopenia: {
+    variant: 'osteopenia' as const,
+    bg: 'bg-amber-500',
+    lightBg: 'bg-amber-50 dark:bg-amber-950/40',
+    text: 'text-amber-700 dark:text-amber-300',
+    border: 'border-amber-200 dark:border-amber-800',
+    desc: 'Elevated systemic risk indicators suggest mild to moderate bone mineral loss.',
+  },
+  Osteoporosis: {
+    variant: 'osteoporosis' as const,
+    bg: 'bg-rose-500',
+    lightBg: 'bg-rose-50 dark:bg-rose-950/40',
+    text: 'text-rose-700 dark:text-rose-300',
+    border: 'border-rose-200 dark:border-rose-800',
+    desc: 'High systemic risk profile indicating pronounced fracture vulnerability. DXA scan recommended.',
+  },
+};
 
 export const ClinicalAnalysisPage: React.FC = () => {
-  const [importance, setImportance] = useState<ClinicalFeatureImportance[]>([]);
-  const [loading, setLoading] = useState(true);
+  // 13 Clinical features state
+  const [numAge, setNumAge] = useState<number | null>(62);
+  const [numHeightM, setNumHeightM] = useState<number | null>(1.58);
+  const [numWeightKg, setNumWeightKg] = useState<number | null>(64.0);
+  const [isFemale, setIsFemale] = useState<boolean>(true);
+  const [menopausalStatus, setMenopausalStatus] = useState<MenopausalStatus>('post');
+  const [numMenopauseAge, setNumMenopauseAge] = useState<number | null>(46);
+  const [numMaxWalkingKm, setNumMaxWalkingKm] = useState<number | null>(2.5);
+  const [activeBmi, setActiveBmi] = useState<number | null>(25.64);
+  const [isBmiOverridden, setIsBmiOverridden] = useState<boolean>(false);
 
-  // Cohort Reference Medians learned strictly on Mendeley training partition
-  const cohortMedians = {
-    age: 52.0,
-    bmi: 26.3,
-    menopause_age: 47.0,
-    max_walking_km: 2.0,
-    weight_kg: 68.0,
-  };
+  // 6 binary clinical indicators
+  const [jointPain, setJointPain] = useState<boolean>(true);
+  const [smoker, setSmoker] = useState<boolean>(false);
+  const [diabetic, setDiabetic] = useState<boolean>(false);
+  const [hypothyroidism, setHypothyroidism] = useState<boolean>(false);
+  const [fracture, setFracture] = useState<boolean>(false);
+  const [familyHistory, setFamilyHistory] = useState<boolean>(true);
 
-  // Interactive patient simulator state
-  const [simAge, setSimAge] = useState(62);
-  const [simHeight, setSimHeight] = useState(1.58);
-  const [simWeight, setSimWeight] = useState(64);
-  const [simMenopauseAge, setSimMenopauseAge] = useState(46);
-  const [simFracture, setSimFracture] = useState(true);
-  const [simFamilyHistory, setSimFamilyHistory] = useState(true);
+  // Prediction & SHAP explainability state
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
+  const [shapExplanation, setShapExplanation] = useState<ShapExplanationResponse | null>(null);
+  const [globalImportance, setGlobalImportance] = useState<GlobalFeatureImportanceItem[]>([]);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedShapClass, setSelectedShapClass] = useState<string>('Osteoporosis');
 
-  const simBmi = Number((simWeight / (simHeight * simHeight)).toFixed(1));
-
+  // Load global feature importance on mount
   useEffect(() => {
     let isMounted = true;
-    const fetchImportance = async () => {
-      try {
-        const res = await api.getClinicalImportance();
-        if (isMounted) {
-          setImportance(res.features);
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error('Failed to load clinical importance:', err);
-        if (isMounted) setLoading(false);
-      }
-    };
-    fetchImportance();
+    api.getShapGlobal()
+      .then((items) => {
+        if (isMounted) setGlobalImportance(items);
+      })
+      .catch((err) => console.error('Failed to load global SHAP importance:', err));
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const formatFeatureName = (rawName: string) => {
-    const map: Record<string, string> = {
-      age: 'Patient Age',
-      bmi: 'Calculated BMI',
-      weight_kg: 'Body Weight (kg)',
-      height_m: 'Height (m)',
-      max_walking_km: 'Max Walking Distance',
-      menopause_age: 'Menopause Onset Age',
-      is_menopausal: 'Menopausal Status',
-      gender_female: 'Female Gender',
-      hypothyroidism: 'Hypothyroidism History',
-      history_of_fracture: 'Prior Fragility Fracture',
-      family_history_osteoporosis: 'Family Osteoporosis History',
-      smoker: 'Smoking History',
-      diabetic: 'Diabetic Indicator',
-      joint_pain: 'Joint Pain Symptoms',
-    };
-    return map[rawName] || rawName.replace('obesity_', '').replace(/_/g, ' ');
+  const buildPayload = (): ClinicalFeatures => ({
+    num_age: numAge !== null ? numAge : undefined,
+    num_height_m: numHeightM !== null ? numHeightM : undefined,
+    num_weight_kg: numWeightKg !== null ? numWeightKg : undefined,
+    num_bmi: activeBmi !== null ? activeBmi : undefined,
+    num_menopause_age: isFemale && menopausalStatus === 'post' ? numMenopauseAge : null,
+    num_max_walking_km: numMaxWalkingKm !== null ? numMaxWalkingKm : undefined,
+    gender_female: isFemale ? 1.0 : 0.0,
+    joint_pain: jointPain ? 1.0 : 0.0,
+    smoker: smoker ? 1.0 : 0.0,
+    diabetic: diabetic ? 1.0 : 0.0,
+    hypothyroidism: hypothyroidism ? 1.0 : 0.0,
+    fracture: fracture ? 1.0 : 0.0,
+    family_history: familyHistory ? 1.0 : 0.0,
+  });
+
+  const handleRunClinicalPrediction = async (targetCls?: string) => {
+    setIsAnalyzing(true);
+    setErrorMsg(null);
+    const payload = buildPayload();
+    try {
+      // 1. Run independent clinical machine learning prediction
+      const pred = await api.predictClinical(payload);
+      setPrediction(pred);
+
+      // 2. Run SHAP local attribution explanation
+      const clsToExplain = targetCls || selectedShapClass || pred.predicted_label;
+      const shap = await api.explainClinicalShap(payload, clsToExplain);
+      setShapExplanation(shap);
+      setSelectedShapClass(clsToExplain);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Clinical risk analysis failed.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
-  const chartData = importance
-    .slice(0, 10)
-    .map((item) => ({
-      name: formatFeatureName(item.feature_name),
-      importance: Number((item.importance_mean * 100).toFixed(1)),
-      std: Number((item.importance_std * 100).toFixed(1)),
-    }));
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <Stethoscope className="w-5 h-5 text-teal-600" />
-          Clinical Variable Analysis & Predictor Importance
-        </h2>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Quantifying the systemic diagnostic contribution of non-imaging clinical risk indicators evaluated across the patient cohort.
-        </p>
+      <div className="border-b border-slate-200 dark:border-slate-800 pb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Stethoscope className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+            Clinical Risk Indicator Analysis &amp; SHAP Explainability
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Independent clinical prediction model with SHAP local waterfall attribution and global Gini feature importance.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="teal" size="sm">
+            13 Clinical Features
+          </Badge>
+          <Badge variant="blue" size="sm">
+            Platt Calibrated Random Forest
+          </Badge>
+        </div>
       </div>
 
+      {/* Main Layout: Form (Left) vs Results & SHAP (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Feature Importance Chart */}
-        <div className="lg:col-span-7 space-y-6">
+        {/* Left Column (5 cols): 13 Clinical Features Form */}
+        <div className="lg:col-span-5 space-y-5">
           <Card>
             <CardHeader
-              title="Clinical Predictor Importance Distribution"
-              subtitle="Relative predictive weight (%) derived from clinical cohort analysis"
-              action={
-                <Badge variant="teal" size="sm">
-                  Leakage-Controlled
-                </Badge>
-              }
+              title="Patient Clinical Profile"
+              subtitle="Enter verified patient demographic, anthropometric, and systemic risk data"
             />
-            <CardContent className="h-96">
-              {loading ? (
-                <div className="h-full flex items-center justify-center text-xs text-slate-400">
-                  Loading feature importances...
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={chartData}
-                    layout="vertical"
-                    margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
+            <CardContent className="space-y-4">
+              {/* Biological Sex Selector */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Biological Gender
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFemale(true);
+                      setMenopausalStatus('post');
+                      if (numMenopauseAge === null) setNumMenopauseAge(46);
+                    }}
+                    className={`py-2 px-3 rounded-lg border text-xs font-semibold transition ${
+                      isFemale
+                        ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    }`}
                   >
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                    <XAxis type="number" unit="%" tick={{ fontSize: 11 }} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={140} />
-                    <Tooltip
-                      formatter={(val: any) => [`${val}% relative weight`, 'Impact']}
-                      contentStyle={{ borderRadius: '8px', fontSize: '12px' }}
-                    />
-                    <Bar dataKey="importance" fill="#0d9488" radius={[0, 4, 4, 0]}>
-                      {chartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.importance >= 10 ? '#0d9488' : entry.importance >= 4 ? '#0ea5e9' : '#64748b'}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
+                    Female (Post-Menopausal Profile)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFemale(false);
+                      setMenopausalStatus('pre_peri');
+                      setNumMenopauseAge(null);
+                    }}
+                    className={`py-2 px-3 rounded-lg border text-xs font-semibold transition ${
+                      !isFemale
+                        ? 'border-teal-500 bg-teal-50/50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 shadow-xs'
+                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    Male
+                  </button>
+                </div>
+              </div>
 
-          {/* Clinical Insights Card */}
-          <Card>
-            <CardHeader
-              title="Clinical Predictor Significance"
-              subtitle="Comparison against published epidemiological osteopenia/osteoporosis literature"
-            />
-            <CardContent className="text-xs space-y-3 text-slate-600 dark:text-slate-400">
-              <p>
-                <strong className="text-slate-800 dark:text-slate-200">Height & Frame Assessment:</strong> Height loss is
-                a hallmark of progressive vertebral compression and subclinical microfractures, explaining its strong
-                permutation importance drop when shuffled.
-              </p>
-              <p>
-                <strong className="text-slate-800 dark:text-slate-200">Menopause Age & Estrogen Deprivation:</strong>{' '}
-                Accelerated bone turnover following natural or surgical menopause precipitates rapid cancellous
-                demineralization, making early menopause an established clinical risk modifier.
-              </p>
-              <p>
-                <strong className="text-slate-800 dark:text-slate-200">Complementary Image-Clinical Fusion:</strong>{' '}
-                While CNNs extract localized cortical bone thickness and trabecular micro-texture from radiographs,
-                clinical features capture systemic hormonal and metabolic history that imaging alone cannot register.
-              </p>
+              {/* Age Field */}
+              <NumericInputField
+                id="clinical-age"
+                label="Patient Age"
+                unit="years"
+                min={18}
+                max={110}
+                step={1}
+                value={numAge}
+                onChange={setNumAge}
+                placeholder="e.g., 62"
+                helperText="Age is the primary demographic determinant of systemic cortical bone density decline."
+              />
+
+              {/* Height Unit Converter */}
+              <HeightConverter
+                valueMetres={numHeightM}
+                onChangeMetres={setNumHeightM}
+              />
+
+              {/* Weight Field */}
+              <NumericInputField
+                id="clinical-weight"
+                label="Patient Weight"
+                unit="kg"
+                min={25}
+                max={220}
+                step={0.5}
+                value={numWeightKg}
+                onChange={setNumWeightKg}
+                placeholder="e.g., 64.0"
+                helperText="Body weight in kilograms. Low body mass index correlates with increased fracture risk."
+              />
+
+              {/* Real-time Reactive BMI Calculator */}
+              <BmiCalculator
+                heightM={numHeightM}
+                weightKg={numWeightKg}
+                onBmiChange={(bmi, overridden) => {
+                  setActiveBmi(bmi);
+                  setIsBmiOverridden(overridden);
+                }}
+              />
+
+              {/* Menopausal Status and Onset Age */}
+              <MenopauseSelector
+                isFemale={isFemale}
+                status={menopausalStatus}
+                onsetAge={numMenopauseAge}
+                onStatusChange={setMenopausalStatus}
+                onOnsetAgeChange={setNumMenopauseAge}
+              />
+
+              {/* Walking Distance Multi-Unit Converter */}
+              <WalkingDistanceConverter
+                valueKm={numMaxWalkingKm}
+                onChangeKm={setNumMaxWalkingKm}
+              />
+
+              {/* 6 Binary Risk Factors */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5">
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Systemic Comorbidities &amp; Clinical History
+                </p>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  {[
+                    { label: 'Prior Fragility Fracture', val: fracture, set: setFracture },
+                    { label: 'Family History of Osteo', val: familyHistory, set: setFamilyHistory },
+                    { label: 'Knee Joint Pain', val: jointPain, set: setJointPain },
+                    { label: 'Smoker History', val: smoker, set: setSmoker },
+                    { label: 'Type II Diabetes', val: diabetic, set: setDiabetic },
+                    { label: 'Hypothyroidism', val: hypothyroidism, set: setHypothyroidism },
+                  ].map((item, idx) => (
+                    <label
+                      key={idx}
+                      className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer select-none transition ${
+                        item.val
+                          ? 'border-teal-500/80 bg-teal-50/50 dark:bg-teal-950/30 text-teal-800 dark:text-teal-200'
+                          : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-400'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={item.val}
+                        onChange={(e) => item.set(e.target.checked)}
+                        className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                      />
+                      <span className="font-medium text-[11px] leading-tight">{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-2">
+                <Button
+                  onClick={() => handleRunClinicalPrediction()}
+                  variant="primary"
+                  size="md"
+                  className="w-full"
+                  isLoading={isAnalyzing}
+                  leftIcon={<Sparkles className="w-4 h-4" />}
+                >
+                  Evaluate Clinical Risk &amp; Generate SHAP
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Column: Interactive Patient Simulator */}
-        <div className="lg:col-span-5 space-y-6">
+        {/* Right Column (7 cols): Prediction, SHAP Waterfall, & Global Importance */}
+        <div className="lg:col-span-7 space-y-5">
+          {errorMsg && (
+            <div className="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Analysis Failure</p>
+                <p className="mt-0.5">{errorMsg}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Prediction Result Card */}
+          {prediction && (
+            <Card className="border-t-4 border-t-teal-500">
+              <CardHeader
+                title="Clinical Model Assessment"
+                subtitle="Independent classification based on 13 patient systemic indicators (Platt Sigmoid Calibrated)"
+                action={
+                  <Badge variant={CLASS_CONFIG[prediction.predicted_label].variant} size="md">
+                    {prediction.predicted_label}
+                  </Badge>
+                }
+              />
+              <CardContent className="space-y-4">
+                <div className={`p-4 rounded-xl border ${CLASS_CONFIG[prediction.predicted_label].border} ${CLASS_CONFIG[prediction.predicted_label].lightBg} flex items-center justify-between`}>
+                  <div>
+                    <span className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      Systemic Bone Mineral Risk
+                    </span>
+                    <h3 className={`text-2xl font-bold mt-0.5 ${CLASS_CONFIG[prediction.predicted_label].text}`}>
+                      {(prediction.confidence * 100).toFixed(1)}% {prediction.predicted_label}
+                    </h3>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-md">
+                      {CLASS_CONFIG[prediction.predicted_label].desc}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] uppercase font-mono text-slate-400">Calibration</span>
+                    <p className="text-xs font-bold text-teal-600 dark:text-teal-400">
+                      3-Fold Platt Scaling
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                      {prediction.inference_duration_ms} ms
+                    </p>
+                  </div>
+                </div>
+
+                {/* Multiclass Probability Distribution */}
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  {(['Normal', 'Osteopenia', 'Osteoporosis'] as const).map((cls) => {
+                    const prob = (prediction.calibrated_probabilities?.[cls] ?? prediction.probabilities[cls]) * 100;
+                    const rawProb = (prediction.raw_probabilities?.[cls] ?? prediction.probabilities[cls]) * 100;
+                    return (
+                      <div key={cls} className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                        <span className="text-slate-500 font-medium">{cls}</span>
+                        <p className="text-base font-bold text-slate-800 dark:text-slate-200 mt-0.5">
+                          {prob.toFixed(1)}%
+                        </p>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          Raw: {rawProb.toFixed(1)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* SHAP Waterfall & Individual Explanation */}
           <Card>
             <CardHeader
-              title="Patient Feature Profiler"
-              subtitle="Inspect patient variables against training cohort medians"
+              title="SHAP Local Feature Attribution (Waterfall Plot)"
+              subtitle="Mathematical contribution of each patient indicator shifting probability from cohort base rate"
               action={
-                <Badge variant="blue" size="sm">
-                  Interactive
-                </Badge>
+                <div className="flex items-center gap-1">
+                  {(['Osteoporosis', 'Osteopenia', 'Normal'] as const).map((cls) => (
+                    <button
+                      key={cls}
+                      type="button"
+                      onClick={() => {
+                        setSelectedShapClass(cls);
+                        handleRunClinicalPrediction(cls);
+                      }}
+                      className={`px-2 py-1 rounded text-[11px] font-medium transition ${
+                        selectedShapClass === cls
+                          ? 'bg-teal-600 text-white'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                      }`}
+                    >
+                      {cls}
+                    </button>
+                  ))}
+                </div>
               }
             />
-            <CardContent className="space-y-5 text-xs">
-              {/* Age Slider */}
-              <div>
-                <div className="flex justify-between font-medium mb-1.5">
-                  <span>Patient Age:</span>
-                  <span className="font-mono text-teal-600 font-bold">{simAge} years</span>
-                </div>
-                <input
-                  type="range"
-                  min={30}
-                  max={90}
-                  value={simAge}
-                  onChange={(e) => setSimAge(Number(e.target.value))}
-                  className="w-full accent-teal-600"
-                />
-                <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
-                  <span>Younger (30y)</span>
-                  <span>Cohort Median: 52y</span>
-                  <span>Older (90y)</span>
-                </div>
-              </div>
-
-              {/* BMI Derived Slider */}
-              <div>
-                <div className="flex justify-between font-medium mb-1.5">
-                  <span>Calculated BMI:</span>
-                  <span className="font-mono text-sky-600 font-bold">{simBmi} kg/m²</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3 mb-1">
-                  <div>
-                    <label className="text-[10px] text-slate-400">Height (m)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={simHeight}
-                      onChange={(e) => setSimHeight(Number(e.target.value))}
-                      className="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
-                    />
+            <CardContent className="space-y-4">
+              {shapExplanation ? (
+                <div className="space-y-4">
+                  {/* Summary Box */}
+                  <div className="p-3 rounded-xl bg-teal-50/50 dark:bg-teal-950/30 border border-teal-200/80 dark:border-teal-800/50 text-xs text-teal-900 dark:text-teal-200 space-y-1">
+                    <span className="font-semibold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                      SHAP Clinical Attribution Summary:
+                    </span>
+                    <p className="leading-relaxed text-[11px]">
+                      {shapExplanation.summary}
+                    </p>
                   </div>
-                  <div>
-                    <label className="text-[10px] text-slate-400">Weight (kg)</label>
-                    <input
-                      type="number"
-                      value={simWeight}
-                      onChange={(e) => setSimWeight(Number(e.target.value))}
-                      className="w-full px-2 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900"
-                    />
+
+                  {/* Waterfall Steps Representation */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs text-slate-500 font-mono px-1">
+                      <span>Baseline Expected Prior: {(shapExplanation.base_value * 100).toFixed(1)}%</span>
+                      <span>Target Prediction: {(shapExplanation.final_predicted_value * 100).toFixed(1)}%</span>
+                    </div>
+
+                    <div className="space-y-1.5 border border-slate-200 dark:border-slate-800 rounded-xl p-3 bg-white dark:bg-slate-950">
+                      {shapExplanation.waterfall_steps.slice(0, 8).map((step, idx) => {
+                        const isPositive = step.shap_value > 0;
+                        const magnitude = Math.abs(step.shap_value) * 100;
+
+                        return (
+                          <div key={idx} className="flex items-center gap-3 text-xs">
+                            <span className="w-36 font-medium text-slate-700 dark:text-slate-300 truncate text-[11px]">
+                              {step.display_name}
+                            </span>
+                            <span className="w-24 text-[10px] text-slate-400 truncate font-mono">
+                              {step.display_value}
+                            </span>
+                            <div className="flex-1 flex items-center h-4 relative">
+                              <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full relative overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all duration-300 ${
+                                    isPositive ? 'bg-rose-500' : 'bg-emerald-500'
+                                  }`}
+                                  style={{ width: `${Math.min(magnitude * 2, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                            <span className={`w-16 text-right font-mono font-semibold text-[11px] ${
+                              isPositive ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'
+                            }`}>
+                              {isPositive ? '+' : ''}{(step.shap_value * 100).toFixed(2)}%
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-                <div className="text-[10px] text-slate-400">Cohort Median: 26.3 kg/m²</div>
-              </div>
 
-              {/* Menopause Age */}
-              <div>
-                <div className="flex justify-between font-medium mb-1.5">
-                  <span>Menopause Age:</span>
-                  <span className="font-mono text-amber-600 font-bold">{simMenopauseAge} years</span>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                    {shapExplanation.disclaimer}
+                  </p>
                 </div>
-                <input
-                  type="range"
-                  min={35}
-                  max={60}
-                  value={simMenopauseAge}
-                  onChange={(e) => setSimMenopauseAge(Number(e.target.value))}
-                  className="w-full accent-amber-600"
-                />
-                <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
-                  <span>Early (&lt;40y)</span>
-                  <span>Cohort Median: 47y</span>
-                  <span>Late (&gt;55y)</span>
+              ) : (
+                <div className="h-48 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center text-center p-6 text-slate-400">
+                  <BarChart2 className="w-8 h-8 mb-2 text-slate-300 dark:text-slate-600" />
+                  <p className="text-xs font-medium">SHAP local explanation will generate upon submitting the clinical form.</p>
+                  <p className="text-[11px] mt-0.5">Click "Evaluate Clinical Risk &amp; Generate SHAP" to view feature attribution.</p>
                 </div>
-              </div>
+              )}
+            </CardContent>
+          </Card>
 
-              {/* Historical Indicators */}
-              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                <label className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 cursor-pointer">
-                  <span>Prior Fragility Fracture</span>
-                  <input
-                    type="checkbox"
-                    checked={simFracture}
-                    onChange={(e) => setSimFracture(e.target.checked)}
-                    className="rounded text-teal-600"
-                  />
-                </label>
-                <label className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/80 cursor-pointer">
-                  <span>Family History of Osteoporosis</span>
-                  <input
-                    type="checkbox"
-                    checked={simFamilyHistory}
-                    onChange={(e) => setSimFamilyHistory(e.target.checked)}
-                    className="rounded text-teal-600"
-                  />
-                </label>
-              </div>
-
-              {/* Cohort Comparison Summary Card */}
-              <div className="p-3.5 rounded-xl bg-teal-50/70 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800/60">
-                <div className="flex items-center gap-2 font-semibold text-teal-900 dark:text-teal-200 mb-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600" />
-                  <span>Profile Assessment Summary</span>
-                </div>
-                <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-[11px]">
-                  {simAge > cohortMedians.age ? 'Patient age is above' : 'Patient age is below'} the research cohort
-                  median ({cohortMedians.age}y).{' '}
-                  {simFracture || simFamilyHistory
-                    ? 'Positive family or fragility fracture history increases systemic risk weighting in the multimodal classifier.'
-                    : 'Absence of secondary fracture indicators corresponds to lower baseline clinical prior.'}
-                </p>
+          {/* Global Clinical Predictor Importance Table */}
+          <Card>
+            <CardHeader
+              title="Global Feature Importance Ranking"
+              subtitle="Permutation and Gini importance across the complete 13-feature clinical contract"
+            />
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500">
+                      <th className="pb-2 font-semibold">Rank</th>
+                      <th className="pb-2 font-semibold">Feature Name</th>
+                      <th className="pb-2 font-semibold">Category</th>
+                      <th className="pb-2 font-semibold text-right">Relative Weight</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
+                    {globalImportance.slice(0, 7).map((f, i) => (
+                      <tr key={f.feature_name} className="hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                        <td className="py-2 font-mono text-slate-400">#{i + 1}</td>
+                        <td className="py-2 font-medium text-slate-800 dark:text-slate-200">
+                          {f.display_name}
+                        </td>
+                        <td className="py-2">
+                          <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-600 dark:text-slate-400">
+                            {f.category}
+                          </span>
+                        </td>
+                        <td className="py-2 text-right font-mono font-bold text-teal-600 dark:text-teal-400">
+                          {f.percentage.toFixed(1)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </CardContent>
           </Card>

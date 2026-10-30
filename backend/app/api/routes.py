@@ -19,11 +19,19 @@ from backend.app.schemas.models import (
     ClinicalInputSchema,
     EvaluateRequest,
     EvaluateResponse,
+    ImageQualityResponse,
+    ShapExplanationResponse,
+    GlobalFeatureImportanceItem,
+    CalibrationReportResponse,
 )
 from backend.app.services.model_registry import registry
 from backend.app.services.inference_service import inference_service
 from backend.app.services.gradcam_service import gradcam_service
 from backend.app.services.report_service import report_service
+from backend.app.services.image_quality_service import image_quality_service
+from backend.app.services.shap_service import shap_service
+from backend.app.services.calibration_service import calibration_service
+from backend.app.services.explainability_service import explainability_service
 
 logger = logging.getLogger(__name__)
 
@@ -284,3 +292,64 @@ async def evaluate_research_dataset(payload: EvaluateRequest):
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/image-quality", response_model=ImageQualityResponse)
+async def assess_image_quality(
+    file: UploadFile = File(..., description="Knee radiograph image (JPG, PNG)"),
+):
+    """
+    Pre-inference Radiographic Image Quality Assessment.
+    Analyzes blurriness (Laplacian variance), contrast, exposure, resolution, and format integrity.
+    """
+    ext = Path(file.filename).suffix.lower()
+    if ext not in settings.ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid file extension '{ext}'. Only JPG, JPEG, and PNG radiographs are permitted.",
+        )
+
+    image_bytes = await file.read()
+    if len(image_bytes) == 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
+
+    assessment = image_quality_service.assess_image(image_bytes=image_bytes, filename=file.filename)
+    return assessment
+
+@router.post("/shap-explain", response_model=ShapExplanationResponse)
+async def explain_clinical_shap(
+    payload: ClinicalInputSchema,
+    target_class: Optional[str] = Query(None, description="Optional target class: Normal, Osteopenia, Osteoporosis"),
+):
+    """
+    Compute authentic local SHAP explanations for the 13 clinical risk indicators.
+    Uses TreeExplainer with exact feature ordering and baseline expected values.
+    """
+    try:
+        explanation = shap_service.explain_patient(clinical_input=payload, target_class=target_class)
+        return explanation
+    except Exception as e:
+        logger.error(f"SHAP explanation generation failed: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"SHAP explanation error: {str(e)}")
+
+@router.get("/shap-global", response_model=List[GlobalFeatureImportanceItem])
+async def get_shap_global():
+    """
+    Retrieve global clinical feature importance rankings with clinical descriptions.
+    """
+    try:
+        return shap_service.get_global_importance()
+    except Exception as e:
+        logger.error(f"Failed to fetch global SHAP importance: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.get("/calibration-status", response_model=CalibrationReportResponse)
+async def get_calibration_status():
+    """
+    Return probability calibration profiles, ECE, Brier scores, and reliability diagram curves.
+    """
+    try:
+        return calibration_service.get_full_calibration_report()
+    except Exception as e:
+        logger.error(f"Failed to fetch calibration status: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

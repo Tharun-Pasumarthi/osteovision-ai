@@ -200,6 +200,7 @@ class PredictionResponse(BaseModel):
     predicted_label: str  # "Normal" | "Osteopenia" | "Osteoporosis"
     confidence: float
     probabilities: Dict[str, float]
+    raw_probabilities: Optional[Dict[str, float]] = None
     model_id: str
     model_name: str
     input_type: str
@@ -216,7 +217,80 @@ class PredictionResponse(BaseModel):
     vision_probabilities: Optional[Dict[str, float]] = None
     clinical_probabilities: Optional[Dict[str, float]] = None
     image_meta: Optional[Dict[str, Any]] = None
+    image_quality: Optional[Dict[str, Any]] = None
     gradcam: Optional[Any] = None
+    disclaimer: str
+
+
+class ImageQualityResponse(BaseModel):
+    overall_status: str  # "acceptable" | "review_recommended" | "unusable"
+    quality_score: float  # 0.0 to 100.0
+    is_acceptable: bool
+    can_proceed_to_inference: bool
+    filename: str
+    format: str
+    width: int
+    height: int
+    aspect_ratio: float
+    laplacian_variance: float
+    mean_brightness: float
+    contrast_std: float
+    blur_status: str
+    exposure_status: str
+    contrast_status: str
+    issues: List[str]
+    recommendations: List[str]
+    disclaimer: str
+
+class ShapContribution(BaseModel):
+    feature_name: str
+    display_name: str
+    category: str
+    unit: str
+    description: str
+    feature_value: Optional[Any] = None
+    standardized_value: float
+    display_value: str
+    shap_value: float
+    direction: str  # "increases_risk" | "protective" | "neutral"
+    magnitude: float
+
+class WaterfallStep(BaseModel):
+    feature_name: str
+    display_name: str
+    display_value: str
+    shap_value: float
+    start_value: float
+    end_value: float
+    direction: str
+
+class ShapExplanationResponse(BaseModel):
+    model_name: str
+    predicted_class: str
+    target_class: str
+    calibrated_probabilities: Dict[str, float]
+    base_value: float
+    final_predicted_value: float
+    contributions: List[ShapContribution]
+    positive_factors: List[ShapContribution]
+    negative_factors: List[ShapContribution]
+    waterfall_steps: List[WaterfallStep]
+    summary: str
+    disclaimer: str
+
+class GlobalFeatureImportanceItem(BaseModel):
+    feature_name: str
+    display_name: str
+    category: str
+    unit: str
+    importance_score: float
+    percentage: float
+    description: str
+
+class CalibrationReportResponse(BaseModel):
+    image_model_calibration: Dict[str, Any]
+    clinical_model_calibration: Dict[str, Any]
+    calibration_thresholds: Dict[str, Any]
     disclaimer: str
 
 class GradCAMResponse(BaseModel):

@@ -8,6 +8,10 @@ import {
   ClinicalFeatureImportance,
   SampleImage,
   ClinicalFeatures,
+  ImageQualityAssessment,
+  ShapExplanationResponse,
+  GlobalFeatureImportanceItem,
+  CalibrationReportResponse,
 } from '../types/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -65,6 +69,40 @@ class ApiClient {
 
   getSampleImageUrl(sampleId: string): string {
     return `${API_BASE_URL}/api/sample-images/${sampleId}/file`;
+  }
+
+  async assessImageQuality(file: File | Blob, signal?: AbortSignal): Promise<ImageQualityAssessment> {
+    const formData = new FormData();
+    formData.append('file', file, (file as File).name || 'radiograph.jpg');
+    return this.request<ImageQualityAssessment>('/api/image-quality', {
+      method: 'POST',
+      body: formData,
+      signal,
+    });
+  }
+
+  async explainClinicalShap(
+    clinicalData: ClinicalFeatures,
+    targetClass?: string,
+    signal?: AbortSignal
+  ): Promise<ShapExplanationResponse> {
+    const query = targetClass ? `?target_class=${encodeURIComponent(targetClass)}` : '';
+    return this.request<ShapExplanationResponse>(`/api/shap-explain${query}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(clinicalData),
+      signal,
+    });
+  }
+
+  async getShapGlobal(signal?: AbortSignal): Promise<GlobalFeatureImportanceItem[]> {
+    return this.request<GlobalFeatureImportanceItem[]>('/api/shap-global', { signal });
+  }
+
+  async getCalibrationStatus(signal?: AbortSignal): Promise<CalibrationReportResponse> {
+    return this.request<CalibrationReportResponse>('/api/calibration-status', { signal });
   }
 
   async predict(

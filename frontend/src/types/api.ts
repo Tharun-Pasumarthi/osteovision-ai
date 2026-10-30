@@ -58,10 +58,36 @@ export interface ClinicalFeatures {
   family_history_osteoporosis?: boolean;
 }
 
+export interface ImageQualityAssessment {
+  overall_status: 'acceptable' | 'review_recommended' | 'unusable';
+  quality_score: number;
+  is_acceptable: boolean;
+  can_proceed_to_inference: boolean;
+  filename: string;
+  format: string;
+  width: number;
+  height: number;
+  aspect_ratio: number;
+  laplacian_variance: number;
+  mean_brightness: number;
+  contrast_std: number;
+  blur_status: string;
+  exposure_status: string;
+  contrast_status: string;
+  issues: string[];
+  recommendations: string[];
+  disclaimer: string;
+}
+
 export interface PredictionResponse {
   predicted_label: 'Normal' | 'Osteopenia' | 'Osteoporosis';
   confidence: number;
   probabilities: {
+    Normal: number;
+    Osteopenia: number;
+    Osteoporosis: number;
+  };
+  raw_probabilities?: {
     Normal: number;
     Osteopenia: number;
     Osteoporosis: number;
@@ -99,6 +125,8 @@ export interface PredictionResponse {
     height: number;
     format: string;
   };
+  image_quality?: ImageQualityAssessment;
+  gradcam?: any;
   disclaimer: string;
 }
 
@@ -117,6 +145,103 @@ export interface GradCAMResponse {
   overlay_base64: string;
   alpha: number;
   notes: string;
+  disclaimer: string;
+}
+
+export interface ShapContribution {
+  feature_name: string;
+  display_name: string;
+  category: string;
+  unit: string;
+  description: string;
+  feature_value?: any;
+  standardized_value: number;
+  display_value: string;
+  shap_value: number;
+  direction: 'increases_risk' | 'protective' | 'neutral';
+  magnitude: number;
+}
+
+export interface WaterfallStep {
+  feature_name: string;
+  display_name: string;
+  display_value: string;
+  shap_value: number;
+  start_value: number;
+  end_value: number;
+  direction: string;
+}
+
+export interface ShapExplanationResponse {
+  model_name: string;
+  predicted_class: string;
+  target_class: string;
+  calibrated_probabilities: {
+    Normal: number;
+    Osteopenia: number;
+    Osteoporosis: number;
+  };
+  base_value: number;
+  final_predicted_value: number;
+  contributions: ShapContribution[];
+  positive_factors: ShapContribution[];
+  negative_factors: ShapContribution[];
+  waterfall_steps: WaterfallStep[];
+  summary: string;
+  disclaimer: string;
+}
+
+export interface GlobalFeatureImportanceItem {
+  feature_name: string;
+  display_name: string;
+  category: string;
+  unit: string;
+  importance_score: number;
+  percentage: number;
+  description: string;
+}
+
+export interface CalibrationBinData {
+  bin_center: number;
+  avg_confidence: number;
+  raw_accuracy: number;
+  calibrated_accuracy: number;
+  sample_count: number;
+}
+
+export interface CalibrationProfile {
+  model_family: string;
+  calibration_method: string;
+  fitted_temperature?: number;
+  cv_folds?: number;
+  validation_partition_samples?: number;
+  raw_metrics: {
+    ece: number;
+    mce: number;
+    brier_score: number;
+    log_loss: number;
+  };
+  calibrated_metrics: {
+    ece: number;
+    mce: number;
+    brier_score: number;
+    log_loss: number;
+  };
+  ece_reduction_percent: number;
+  status: string;
+  reliability_diagram: CalibrationBinData[];
+  notes: string;
+}
+
+export interface CalibrationReportResponse {
+  image_model_calibration: CalibrationProfile;
+  clinical_model_calibration: CalibrationProfile;
+  calibration_thresholds: {
+    well_calibrated_ece: string;
+    moderate_ece: string;
+    poor_ece: string;
+    uncertainty_margin: number;
+  };
   disclaimer: string;
 }
 

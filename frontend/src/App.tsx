@@ -4,9 +4,11 @@ import { DisclaimerBanner } from './components/layout/DisclaimerBanner';
 import { Header } from './components/layout/Header';
 import { Sidebar, NAV_ITEMS } from './components/layout/Sidebar';
 import { OverviewPage } from './pages/OverviewPage';
-import { XRayAnalysisPage } from './pages/XRayAnalysisPage';
+import { ImageAnalysisPage } from './pages/ImageAnalysisPage';
 import { ClinicalAnalysisPage } from './pages/ClinicalAnalysisPage';
-import { ModelComparisonPage } from './pages/ModelComparisonPage';
+import { ExplainableAIPage } from './pages/ExplainableAIPage';
+import { ModelReliabilityPage } from './pages/ModelReliabilityPage';
+import { ModelEvaluationPage } from './pages/ModelEvaluationPage';
 import { DatasetPage } from './pages/DatasetPage';
 
 export const App: React.FC = () => {
@@ -49,9 +51,13 @@ export const App: React.FC = () => {
           <main className="flex-1 overflow-y-auto p-3.5 sm:p-6 lg:p-8 pb-18 md:pb-8">
             <Routes>
               <Route path="/" element={<OverviewPage />} />
-              <Route path="/analysis" element={<XRayAnalysisPage />} />
+              <Route path="/analysis" element={<ImageAnalysisPage />} />
+              <Route path="/image-analysis" element={<Navigate to="/analysis" replace />} />
               <Route path="/clinical" element={<ClinicalAnalysisPage />} />
-              <Route path="/comparison" element={<ModelComparisonPage />} />
+              <Route path="/explainable-ai" element={<ExplainableAIPage />} />
+              <Route path="/reliability" element={<ModelReliabilityPage />} />
+              <Route path="/evaluation" element={<ModelEvaluationPage />} />
+              <Route path="/comparison" element={<Navigate to="/evaluation" replace />} />
               <Route path="/dataset" element={<DatasetPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
@@ -65,16 +71,17 @@ export const App: React.FC = () => {
         >
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
-            // Short label for mobile bottom bar
             const shortLabel = item.path === '/'
               ? 'Home'
               : item.path === '/analysis'
-              ? 'Diagnosis'
+              ? 'Images'
               : item.path === '/clinical'
               ? 'Clinical'
-              : item.path === '/comparison'
-              ? 'Models'
-              : 'Data';
+              : item.path === '/explainable-ai'
+              ? 'XAI'
+              : item.path === '/reliability'
+              ? 'Reliability'
+              : 'Eval';
 
             return (
               <NavLink
@@ -82,7 +89,7 @@ export const App: React.FC = () => {
                 to={item.path}
                 end={item.path === '/'}
                 className={({ isActive }) =>
-                  `flex flex-col items-center justify-center py-1 px-2 rounded-lg text-[10px] font-medium transition ${
+                  `flex flex-col items-center justify-center py-1 px-1.5 rounded-lg text-[10px] font-medium transition ${
                     isActive
                       ? 'text-teal-600 dark:text-teal-400 font-bold'
                       : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
@@ -90,7 +97,7 @@ export const App: React.FC = () => {
                 }
               >
                 <Icon className="w-4 h-4 mb-0.5" />
-                <span>{shortLabel}</span>
+                <span className="truncate max-w-[50px]">{shortLabel}</span>
               </NavLink>
             );
           })}
